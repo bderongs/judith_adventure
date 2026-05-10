@@ -1,0 +1,93 @@
+html, body {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #000;
+}
+
+#renderCanvas {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
+
+#health-ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 40px;
+    z-index: 10;
+    pointer-events: none;
+    user-select: none;
+    filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.8));
+}
+
+/* Tutorial Window Styles */
+.hidden {
+    display: none !important;
+}
+
+#tutorial-ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    font-family: 'Inter', 'Roboto', 'Segoe UI', sans-serif;
+}
+
+.tutorial-content {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 40px;
+    color: white;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    max-width: 500px;
+}
+
+.tutorial-content h2 {
+    margin-top: 0;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.tutorial-content ul {
+    text-align: left;
+    font-size: 18px;
+    line-height: 1.6;
+    margin: 25px 0;
+}
+
+#tutorial-close {
+    background: linear-gradient(135deg, #4caf50, #2e7d32);
+    color: white;
+    border: none;
+    padding: 12px 35px;
+    font-size: 20px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+    margin-top: 15px;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+}
+
+#tutorial-close:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
+}
+
+#tutorial-close:active {
+    transform: scale(0.95);
+}

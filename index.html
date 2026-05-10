@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projet Judith - Étape 1</title>
+    <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+    <div id="health-ui"></div>
+    <div id="tutorial-ui" class="hidden">
+        <div class="tutorial-content">
+            <h2>Bienvenue <span id="tutorial-name"></span>, voici les instructions :</h2>
+            <ul>
+                <li><strong>Z, Q, S, D</strong> (ou W, A, S, D) : Se déplacer</li>
+                <li><strong>Espace</strong> : Sauter</li>
+                <li><strong>Clic Gauche</strong> (ou Y) : Attaquer</li>
+            </ul>
+            <button id="tutorial-close">Jouer !</button>
+        </div>
+    </div>
+    <canvas id="renderCanvas"></canvas>
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
