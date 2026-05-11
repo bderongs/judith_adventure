@@ -140,3 +140,104 @@ html, body {
 #tutorial-close:active {
     transform: scale(0.95);
 }
+
+/* ============================================================
+   CHEST SYSTEM UI
+   ============================================================ */
+
+/* Proximity hint — appears bottom-center when near a chest */
+#chest-hint {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 22px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 215, 0, 0.45);
+    border-radius: 50px;
+    color: #ffd700;
+    font-family: 'Inter', 'Roboto', 'Segoe UI', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    z-index: 30;
+    pointer-events: none;
+    box-shadow: 0 0 18px rgba(255, 215, 0, 0.25);
+    animation: chest-hint-pulse 1.8s ease-in-out infinite;
+}
+
+.chest-hint-icon {
+    font-size: 22px;
+}
+
+@keyframes chest-hint-pulse {
+    0%,  100% { box-shadow: 0 0 14px rgba(255, 215, 0, 0.2); }
+    50%       { box-shadow: 0 0 28px rgba(255, 215, 0, 0.55); }
+}
+
+/* Chest message popup — appears center-bottom after opening */
+#chest-popup {
+    position: absolute;
+    bottom: 130px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    pointer-events: none;
+    min-width: 300px;
+    max-width: 480px;
+}
+
+#chest-popup.fade-in {
+    animation: popup-slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+#chest-popup.fade-out {
+    animation: popup-fade-out 0.6s ease forwards;
+}
+
+@keyframes popup-slide-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(30px) scale(0.9); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1);   }
+}
+
+@keyframes popup-fade-out {
+    from { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1);   }
+    to   { opacity: 0; transform: translateX(-50%) translateY(-15px) scale(0.95); }
+}
+
+.chest-popup-inner {
+    background: linear-gradient(
+        135deg,
+        rgba(40, 20, 0, 0.85) 0%,
+        rgba(80, 45, 0, 0.80) 100%
+    );
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 215, 0, 0.5);
+    border-radius: 18px;
+    padding: 22px 30px;
+    text-align: center;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 215, 0, 0.15) inset,
+        0 0 40px rgba(255, 180, 0, 0.15);
+    font-family: 'Inter', 'Roboto', 'Segoe UI', sans-serif;
+}
+
+.chest-popup-emoji {
+    font-size: 48px;
+    line-height: 1;
+    margin-bottom: 12px;
+    filter: drop-shadow(0 2px 8px rgba(255, 180, 0, 0.5));
+}
+
+.chest-popup-text {
+    color: #fff8e7;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.55;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}

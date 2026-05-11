@@ -20,6 +20,7 @@ import {
 import { WaterMaterial } from "@babylonjs/materials";
 import "@babylonjs/loaders"; // Indispensable pour charger les .obj
 import HavokPhysics from "@babylonjs/havok";
+import PartySocket from "partysocket";
 
 // ============================================================
 //  WORLD CONFIGURATIONS
@@ -142,6 +143,24 @@ const WORLDS = {
 };
 
 // ============================================================
+//  UTILITIES
+// ============================================================
+let currentSeed = 12345;
+function seededRandom() {
+    currentSeed = (currentSeed * 16807) % 2147483647;
+    return (currentSeed - 1) / 2147483646;
+}
+
+function resetSeed(worldId) {
+    // Use worldId to create a unique but consistent seed per world
+    let seed = 0;
+    for (let i = 0; i < worldId.length; i++) {
+        seed += worldId.charCodeAt(i);
+    }
+    currentSeed = seed || 12345;
+}
+
+// ============================================================
 //  CURRENT WORLD (read from URL param, default = forest)
 // ============================================================
 const urlParams = new URLSearchParams(window.location.search);
@@ -204,6 +223,99 @@ function playerTakeDamage(amount) {
     if (playerHP === 0) {
         console.log("Game Over !");
         setTimeout(() => location.reload(), 1500);
+    }
+}
+
+// ============================================================
+//  CHEST SYSTEM
+// ============================================================
+const activeChests = [];
+
+const CHEST_MESSAGES = [
+    // Jokes 😄
+    { emoji: "😂", text: "Pourquoi les plongeurs plongent-ils toujours en arrière ?\nParce que sinon ils tomberaient dans le bateau !" },
+    { emoji: "🤣", text: "Qu'est-ce qu'un canif ?\nUn petit fien !" },
+    { emoji: "😄", text: "Qu'est-ce qu'un crocodile qui surveille des grains ?\nUn garde-riz !" },
+    { emoji: "🤔", text: "Qu'est-ce qu'un chat tombé dans un pot de peinture le jour de Noël ?\nUn chat-peint de Noël !" },
+    { emoji: "😎", text: "Pourquoi les fantômes sont-ils de si mauvais menteurs ?\nParce qu'on voit à travers eux !" },
+    { emoji: "🧐", text: "Un homme entre dans une bibliothèque et demande s'ils ont des livres sur la paranoïa.\nLa bibliothécaire chuchote : 'Ils sont juste derrière vous !'" },
+    { emoji: "🌵", text: "Le coffre était vide.\nQuelqu'un est passé avant toi... mystérieux." },
+    { emoji: "💤", text: "Ce coffre contenait... rien.\nBien joué pour avoir quand même essayé." },
+    // Weapons & items 🎁
+    { emoji: "⚔️", text: "Tu as trouvé une Épée Dorée !\n(+1 en style, +0 en humilité)" },
+    { emoji: "🪓", text: "Tu as trouvé une Double Hache !\nImpressionnant... et encombrant." },
+    { emoji: "🏹", text: "Tu as trouvé un Arc en Or !\nMais tu n'as pas de flèches... dommage." },
+    { emoji: "🗡️", text: "Tu as trouvé une Dague Mystérieuse !\nElle murmure ton nom à voix basse..." },
+    { emoji: "🔨", text: "Tu as trouvé un Marteau de Guerre !\nC'est lourd, très lourd. Tu arrives quand même à le soulever." },
+    { emoji: "💎", text: "Tu as trouvé un Cristal Magique !\nIl brille de mille feux et sent la vanille." },
+    { emoji: "📜", text: "Tu as trouvé un Parchemin Ancien !\nIl est écrit : 'Le trésor est dans l'autre coffre.'" },
+    { emoji: "👑", text: "Tu as trouvé une Couronne !\nElle te va vraiment bien, on te l'assure." },
+];
+
+let chestHintVisible = false;
+
+function showChestMessage(emoji, text) {
+    const popup = document.getElementById("chest-popup");
+    const emojiEl = document.getElementById("chest-popup-emoji");
+    const textEl = document.getElementById("chest-popup-text");
+    if (!popup || !emojiEl || !textEl) return;
+
+    emojiEl.textContent = emoji;
+    textEl.innerHTML = text.replace(/\n/g, "<br>");
+    popup.classList.remove("hidden", "fade-out");
+    popup.classList.add("fade-in");
+
+    clearTimeout(popup._hideTimer);
+    popup._hideTimer = setTimeout(() => {
+        popup.classList.add("fade-out");
+        popup.classList.remove("fade-in");
+        setTimeout(() => popup.classList.add("hidden"), 600);
+    }, 4000);
+}
+
+function setChestHint(visible) {
+    if (chestHintVisible === visible) return;
+    chestHintVisible = visible;
+    const hint = document.getElementById("chest-hint");
+    if (!hint) return;
+    if (visible) {
+        hint.classList.remove("hidden");
+    } else {
+        hint.classList.add("hidden");
+    }
+}
+
+class Chest {
+    constructor(closedRoot, openRoot, collider) {
+        this.closedRoot = closedRoot;
+        this.openRoot   = openRoot;
+        this.collider   = collider;
+        this.opened     = false;
+        this.collider.metadata = { type: "chest", instance: this };
+        activeChests.push(this);
+    }
+
+    open() {
+        if (this.opened) return;
+        this.opened = true;
+
+        // Hide closed hierarchy
+        this.closedRoot.setEnabled(false);
+        this.closedRoot.getChildMeshes(false).forEach(m => m.setEnabled(false));
+
+        // Show open hierarchy
+        this.openRoot.setEnabled(true);
+        this.openRoot.getChildMeshes(false).forEach(m => { m.setEnabled(true); m.isVisible = true; });
+
+        // Pick a random message
+        const msg = CHEST_MESSAGES[Math.floor(Math.random() * CHEST_MESSAGES.length)];
+        showChestMessage(msg.emoji, msg.text);
+    }
+
+    distanceTo(pos) {
+        const dx = this.collider.position.x - pos.x;
+        const dz = this.collider.position.z - pos.z;
+        return Math.sqrt(dx * dx + dz * dz);
     }
 }
 
@@ -342,7 +454,7 @@ const createScene = async function () {
 
         for (let i = 0; i < 4; i++) {
             const waterMesh = MeshBuilder.CreateGround(`water${i}`, { width: 30, height: 30 }, scene);
-            waterMesh.position = new Vector3((Math.random() - 0.5) * 80, 0.05, (Math.random() - 0.5) * 80);
+            waterMesh.position = new Vector3((seededRandom() - 0.5) * 80, 0.05, (seededRandom() - 0.5) * 80);
             waterMesh.material = waterMaterial;
         }
     }
@@ -377,17 +489,17 @@ const createScene = async function () {
     // Spawn environment instances
     const spawnInstances = (modelKeys, count, scaleRange, addCollisions) => {
         for (let i = 0; i < count; i++) {
-            const randomKey = modelKeys[Math.floor(Math.random() * modelKeys.length)];
+            const randomKey = modelKeys[Math.floor(seededRandom() * modelKeys.length)];
             const rootMesh = loadedModels[randomKey];
             const instanceRoot = rootMesh.instantiateHierarchy();
             if (!instanceRoot) continue;
 
-            const x = (Math.random() - 0.5) * (mapSize - 10);
-            const z = (Math.random() - 0.5) * (mapSize - 10);
-            const scale = scaleRange[0] + Math.random() * (scaleRange[1] - scaleRange[0]);
+            const x = (seededRandom() - 0.5) * (mapSize - 10);
+            const z = (seededRandom() - 0.5) * (mapSize - 10);
+            const scale = scaleRange[0] + seededRandom() * (scaleRange[1] - scaleRange[0]);
 
             instanceRoot.position = new Vector3(x, 0, z);
-            instanceRoot.rotation = new Vector3(0, Math.random() * Math.PI * 2, 0);
+            instanceRoot.rotation = new Vector3(0, seededRandom() * Math.PI * 2, 0);
             instanceRoot.scaling = new Vector3(scale, scale, scale);
 
             if (addCollisions) {
@@ -425,17 +537,17 @@ const createScene = async function () {
     // Spawn enemies
     const numEnemies = 20;
     for (let i = 0; i < numEnemies; i++) {
-        const randomKey = monstersToLoad[Math.floor(Math.random() * monstersToLoad.length)];
+        const randomKey = monstersToLoad[Math.floor(seededRandom() * monstersToLoad.length)];
         const rootMesh = loadedMonsters[randomKey];
         const instanceRoot = rootMesh.instantiateHierarchy();
         if (!instanceRoot) continue;
 
-        const x = (Math.random() - 0.5) * (mapSize - 10);
-        const z = (Math.random() - 0.5) * (mapSize - 10);
+        const x = (seededRandom() - 0.5) * (mapSize - 10);
+        const z = (seededRandom() - 0.5) * (mapSize - 10);
         const scale = 1.0;
 
         instanceRoot.position = new Vector3(x, 0, z);
-        instanceRoot.rotation = new Vector3(0, Math.random() * Math.PI * 2, 0);
+        instanceRoot.rotation = new Vector3(0, seededRandom() * Math.PI * 2, 0);
         instanceRoot.scaling = new Vector3(scale, scale, scale);
 
         const collider = MeshBuilder.CreateCylinder("collider", {
@@ -448,6 +560,51 @@ const createScene = async function () {
         new PhysicsAggregate(collider, PhysicsShapeType.CYLINDER, { mass: 0 }, scene);
 
         new Enemy(instanceRoot, collider, 3);
+    }
+
+    // Load and spawn chests
+    const chestPath = "/assets/Ultimate RPG Items Pack - Aug 2019/OBJ/";
+    const chestClosedResult = await SceneLoader.ImportMeshAsync("", chestPath, "Chest_Closed.obj", scene);
+    const chestOpenResult   = await SceneLoader.ImportMeshAsync("", chestPath, "Chest_Open.obj",   scene);
+
+    // Template roots — hide everything
+    const chestTemplClosed = chestClosedResult.meshes[0];
+    const chestTemplOpen   = chestOpenResult.meshes[0];
+    chestClosedResult.meshes.forEach(m => { m.isVisible = false; m.setEnabled(false); });
+    chestOpenResult.meshes.forEach(m =>   { m.isVisible = false; m.setEnabled(false); });
+
+    const numChests = 7;
+    const chestScale = 1.0; // Same unit scale as the Sword.obj — correct size in world
+    for (let i = 0; i < numChests; i++) {
+        const x   = (seededRandom() - 0.5) * (mapSize - 20);
+        const z   = (seededRandom() - 0.5) * (mapSize - 20);
+        const rotY = seededRandom() * Math.PI * 2;
+
+        // --- Closed chest (visible at start) ---
+        const closedRoot = chestTemplClosed.instantiateHierarchy();
+        if (!closedRoot) continue;
+        closedRoot.position = new Vector3(x, 0, z);
+        closedRoot.scaling  = new Vector3(chestScale, chestScale, chestScale);
+        closedRoot.rotation = new Vector3(0, rotY, 0);
+        closedRoot.setEnabled(true);
+        closedRoot.getChildMeshes(false).forEach(m => { m.isVisible = true; m.setEnabled(true); });
+
+        // --- Open chest (hidden until triggered) ---
+        const openRoot = chestTemplOpen.instantiateHierarchy();
+        if (!openRoot) continue;
+        openRoot.position = new Vector3(x, 0, z);
+        openRoot.scaling  = new Vector3(chestScale, chestScale, chestScale);
+        openRoot.rotation = new Vector3(0, rotY, 0);
+        openRoot.setEnabled(false);
+        openRoot.getChildMeshes(false).forEach(m => m.setEnabled(false));
+
+        // --- Trigger collider (sized for a ~1-unit chest) ---
+        const chestCollider = MeshBuilder.CreateBox("chest_collider_" + i, { width: 1.5, height: 1.2, depth: 1.0 }, scene);
+        chestCollider.position = new Vector3(x, 0.6, z);
+        chestCollider.isVisible = false;
+        chestCollider.checkCollisions = false;
+
+        new Chest(closedRoot, openRoot, chestCollider);
     }
 
     // Load weapon
@@ -478,7 +635,7 @@ const createScene = async function () {
         const origin = camera.globalPosition;
         const forward = camera.getDirection(new Vector3(0, 0, 1));
         const ray = new Ray(origin, forward, 8);
-        const hit = scene.pickWithRay(ray, (mesh) => mesh.name === "collider");
+        const hit = scene.pickWithRay(ray, (mesh) => mesh.name === "collider" || mesh.name.startsWith("chest_collider_"));
 
         if (hit.hit && hit.pickedMesh && hit.pickedMesh.metadata) {
             const meta = hit.pickedMesh.metadata;
@@ -488,6 +645,8 @@ const createScene = async function () {
                 hit.pickedMesh.dispose();
             } else if (meta.type === "enemy") {
                 meta.instance.takeDamage(1);
+            } else if (meta.type === "chest") {
+                meta.instance.open();
             }
         }
     };
@@ -512,11 +671,21 @@ const createScene = async function () {
         }
     });
 
-    // AI loop
+    // AI loop + chest proximity
     scene.onBeforeRenderObservable.add(() => {
         for (const enemy of activeEnemies) {
             enemy.update(camera, scene);
         }
+
+        // Chest proximity hint
+        let nearChest = false;
+        for (const chest of activeChests) {
+            if (!chest.opened && chest.distanceTo(camera.position) < 4) {
+                nearChest = true;
+                break;
+            }
+        }
+        setChestHint(nearChest);
     });
 
     updateHealthUI();
@@ -527,9 +696,114 @@ const createScene = async function () {
 //  BOOTSTRAP
 // ============================================================
 buildWorldMenu();
+resetSeed(currentWorldId);
 
 createScene().then(scene => {
-    engine.runRenderLoop(() => { scene.render(); });
+    // ============================================================
+    //  MULTIPLAYER LOGIC
+    // ============================================================
+    const remotePlayers = new Map();
+    const monsterPath = "/assets/Ultimate Monsters/Blob/glTF/";
+    
+    console.log("Initializing PartySocket for room:", currentWorldId);
+    const socket = new PartySocket({
+        host: window.location.hostname + ":1999", 
+        room: currentWorldId,
+    });
+
+    socket.addEventListener("open", () => {
+        console.log("✅ PartyKit connection established! ID:", socket.id);
+        const statusEl = document.getElementById("multiplayer-status");
+        if (statusEl) {
+            statusEl.textContent = "Multiplayer: Connected";
+            statusEl.style.color = "#4ade80"; // Light green
+        }
+    });
+
+    socket.addEventListener("error", (err) => {
+        console.error("❌ PartyKit connection error:", err);
+        const statusEl = document.getElementById("multiplayer-status");
+        if (statusEl) {
+            statusEl.textContent = "Multiplayer: Error";
+            statusEl.style.color = "#f87171"; // Light red
+        }
+    });
+
+    socket.addEventListener("message", (e) => {
+        let data;
+        try {
+            data = JSON.parse(e.data);
+        } catch(err) {
+            return;
+        }
+
+        if (data.type === "update") {
+            const { id, pos, rot } = data;
+            if (id === socket.id) return; 
+
+            if (!remotePlayers.has(id)) {
+                // Load the Ninja model
+                const ninjaPath = "/assets/Ultimate Monsters/Big/glTF/";
+                SceneLoader.ImportMeshAsync("", ninjaPath, "Ninja.gltf", scene).then(result => {
+                    const mesh = result.meshes[0];
+                    mesh.scaling = new Vector3(1, 1, 1);
+                    // Initialize smoothing targets
+                    mesh.metadata = { 
+                        targetPos: new Vector3(pos.x, pos.y, pos.z),
+                        targetRot: new Vector3(rot.x, rot.y, rot.z)
+                    };
+                    remotePlayers.set(id, mesh);
+                });
+            } else {
+                // Update smoothing targets
+                const mesh = remotePlayers.get(id);
+                if (mesh && mesh.metadata) {
+                    mesh.metadata.targetPos.set(pos.x, pos.y, pos.z);
+                    mesh.metadata.targetRot.set(rot.x, rot.y, rot.z);
+                }
+            }
+        } else if (data.type === "remove") {
+            console.log("Player left:", data.id);
+            const mesh = remotePlayers.get(data.id);
+            if (mesh) {
+                mesh.dispose();
+                remotePlayers.delete(data.id);
+            }
+        }
+    });
+
+    engine.runRenderLoop(() => { 
+        scene.render(); 
+        
+        // Update remote players smoothing
+        remotePlayers.forEach((mesh) => {
+            if (mesh.metadata) {
+                // Smoothly interpolate position (LERP)
+                mesh.position = Vector3.Lerp(mesh.position, mesh.metadata.targetPos, 0.1);
+                // Smoothly interpolate rotation (simple LERP for Y axis)
+                mesh.rotation.y = mesh.rotation.y + (mesh.metadata.targetRot.y - mesh.rotation.y) * 0.1;
+            }
+        });
+
+        // Send local player update
+        if (socket.readyState === WebSocket.OPEN && socket.id) {
+            const camera = scene.activeCamera;
+            if (camera) {
+                // Update Coords UI
+                const coordsEl = document.getElementById("coords-ui");
+                if (coordsEl) {
+                    coordsEl.textContent = `X: ${camera.position.x.toFixed(1)} | Y: ${camera.position.y.toFixed(1)} | Z: ${camera.position.z.toFixed(1)}`;
+                }
+
+                socket.send(JSON.stringify({
+                    type: "update",
+                    id: socket.id,
+                    pos: { x: camera.position.x, y: 0, z: camera.position.z },
+                    rot: { x: 0, y: camera.rotation.y, z: 0 }
+                }));
+            }
+        }
+    });
 });
 
 window.addEventListener("resize", () => { engine.resize(); });

@@ -9,6 +9,8 @@
 <body>
     <div id="health-ui"></div>
     <div id="world-menu"></div>
+    <div id="coords-ui" style="position: fixed; top: 10px; right: 10px; color: white; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; font-family: monospace; pointer-events: none; font-size: 14px; z-index: 1000;">X: 0 | Y: 0 | Z: 0</div>
+    <div id="multiplayer-status" style="position: fixed; bottom: 10px; right: 10px; color: white; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; font-family: sans-serif; pointer-events: none; font-size: 12px; z-index: 1000;">Multiplayer: Disconnected</div>
     <div id="tutorial-ui" class="hidden">
         <div class="tutorial-content">
             <h2>Bienvenue <span id="tutorial-name"></span>, voici les instructions :</h2>
@@ -20,6 +22,20 @@
             <button id="tutorial-close">Jouer !</button>
         </div>
     </div>
+    <!-- Chest proximity hint -->
+    <div id="chest-hint" class="hidden">
+        <span class="chest-hint-icon">📦</span>
+        <span>Attaque pour ouvrir</span>
+    </div>
+
+    <!-- Chest message popup -->
+    <div id="chest-popup" class="hidden">
+        <div class="chest-popup-inner">
+            <div id="chest-popup-emoji" class="chest-popup-emoji"></div>
+            <div id="chest-popup-text" class="chest-popup-text"></div>
+        </div>
+    </div>
+
     <canvas id="renderCanvas"></canvas>
     <script type="module" src="./src/main.js"></script>
 </body>
