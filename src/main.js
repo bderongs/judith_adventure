@@ -200,7 +200,7 @@ const maxHP = 5;
 function updateHealthUI() {
     const healthDiv = document.getElementById("health-ui");
     if (!healthDiv) return;
-    
+
     let hearts = "";
     for (let i = 0; i < maxHP; i++) {
         hearts += i < playerHP ? "❤️ " : "🖤 ";
@@ -210,11 +210,11 @@ function updateHealthUI() {
 
 function playerTakeDamage(amount) {
     if (playerHP <= 0) return;
-    
+
     playerHP -= amount;
     if (playerHP < 0) playerHP = 0;
     updateHealthUI();
-    
+
     const canvas = document.getElementById("renderCanvas");
     canvas.style.transition = "box-shadow 0.1s";
     canvas.style.boxShadow = "inset 0 0 100px red";
@@ -288,9 +288,9 @@ function setChestHint(visible) {
 class Chest {
     constructor(closedRoot, openRoot, collider) {
         this.closedRoot = closedRoot;
-        this.openRoot   = openRoot;
-        this.collider   = collider;
-        this.opened     = false;
+        this.openRoot = openRoot;
+        this.collider = collider;
+        this.opened = false;
         this.collider.metadata = { type: "chest", instance: this };
         activeChests.push(this);
     }
@@ -565,26 +565,26 @@ const createScene = async function () {
     // Load and spawn chests
     const chestPath = "/assets/Ultimate RPG Items Pack - Aug 2019/OBJ/";
     const chestClosedResult = await SceneLoader.ImportMeshAsync("", chestPath, "Chest_Closed.obj", scene);
-    const chestOpenResult   = await SceneLoader.ImportMeshAsync("", chestPath, "Chest_Open.obj",   scene);
+    const chestOpenResult = await SceneLoader.ImportMeshAsync("", chestPath, "Chest_Open.obj", scene);
 
     // Template roots — hide everything
     const chestTemplClosed = chestClosedResult.meshes[0];
-    const chestTemplOpen   = chestOpenResult.meshes[0];
+    const chestTemplOpen = chestOpenResult.meshes[0];
     chestClosedResult.meshes.forEach(m => { m.isVisible = false; m.setEnabled(false); });
-    chestOpenResult.meshes.forEach(m =>   { m.isVisible = false; m.setEnabled(false); });
+    chestOpenResult.meshes.forEach(m => { m.isVisible = false; m.setEnabled(false); });
 
     const numChests = 7;
     const chestScale = 1.0; // Same unit scale as the Sword.obj — correct size in world
     for (let i = 0; i < numChests; i++) {
-        const x   = (seededRandom() - 0.5) * (mapSize - 20);
-        const z   = (seededRandom() - 0.5) * (mapSize - 20);
+        const x = (seededRandom() - 0.5) * (mapSize - 20);
+        const z = (seededRandom() - 0.5) * (mapSize - 20);
         const rotY = seededRandom() * Math.PI * 2;
 
         // --- Closed chest (visible at start) ---
         const closedRoot = chestTemplClosed.instantiateHierarchy();
         if (!closedRoot) continue;
         closedRoot.position = new Vector3(x, 0, z);
-        closedRoot.scaling  = new Vector3(chestScale, chestScale, chestScale);
+        closedRoot.scaling = new Vector3(chestScale, chestScale, chestScale);
         closedRoot.rotation = new Vector3(0, rotY, 0);
         closedRoot.setEnabled(true);
         closedRoot.getChildMeshes(false).forEach(m => { m.isVisible = true; m.setEnabled(true); });
@@ -593,7 +593,7 @@ const createScene = async function () {
         const openRoot = chestTemplOpen.instantiateHierarchy();
         if (!openRoot) continue;
         openRoot.position = new Vector3(x, 0, z);
-        openRoot.scaling  = new Vector3(chestScale, chestScale, chestScale);
+        openRoot.scaling = new Vector3(chestScale, chestScale, chestScale);
         openRoot.rotation = new Vector3(0, rotY, 0);
         openRoot.setEnabled(false);
         openRoot.getChildMeshes(false).forEach(m => m.setEnabled(false));
@@ -704,10 +704,17 @@ createScene().then(scene => {
     // ============================================================
     const remotePlayers = new Map();
     const monsterPath = "/assets/Ultimate Monsters/Blob/glTF/";
-    
+
     console.log("Initializing PartySocket for room:", currentWorldId);
+
+    // Switch host based on where the game is running
+    const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const partyHost = isLocal
+        ? window.location.hostname + ":1999"
+        : "projet-judith-multiplayer.bderongs.partykit.dev"; // <--- REPLACE 'baptiste' with your PartyKit username after deploy
+
     const socket = new PartySocket({
-        host: window.location.hostname + ":1999", 
+        host: partyHost,
         room: currentWorldId,
     });
 
@@ -733,13 +740,13 @@ createScene().then(scene => {
         let data;
         try {
             data = JSON.parse(e.data);
-        } catch(err) {
+        } catch (err) {
             return;
         }
 
         if (data.type === "update") {
             const { id, pos, rot } = data;
-            if (id === socket.id) return; 
+            if (id === socket.id) return;
 
             if (!remotePlayers.has(id)) {
                 // Load the Ninja model
@@ -748,7 +755,7 @@ createScene().then(scene => {
                     const mesh = result.meshes[0];
                     mesh.scaling = new Vector3(1, 1, 1);
                     // Initialize smoothing targets
-                    mesh.metadata = { 
+                    mesh.metadata = {
                         targetPos: new Vector3(pos.x, pos.y, pos.z),
                         targetRot: new Vector3(rot.x, rot.y, rot.z)
                     };
@@ -772,9 +779,9 @@ createScene().then(scene => {
         }
     });
 
-    engine.runRenderLoop(() => { 
-        scene.render(); 
-        
+    engine.runRenderLoop(() => {
+        scene.render();
+
         // Update remote players smoothing
         remotePlayers.forEach((mesh) => {
             if (mesh.metadata) {
